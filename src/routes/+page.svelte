@@ -1,59 +1,77 @@
 <script>
-	import Counter from './Counter.svelte';
-	import welcome from '$lib/images/svelte-welcome.webp';
-	import welcome_fallback from '$lib/images/svelte-welcome.png';
+  let isSelecting = false;
+  let slots = [];
+  let selectedSlots = new Set();
+
+  // Initialize time slots for the calendar
+  const times = ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  
+  // Populate the slots array with objects representing each time slot
+  for (let day of days) {
+    for (let time of times) {
+      slots.push({ day, time, selected: false });
+    }
+  }
+
+  function mouseDown(slot) {
+    isSelecting = true;
+    toggleSlot(slot);
+  }
+
+  function mouseOver(slot) {
+    if (isSelecting) {
+      toggleSlot(slot);
+    }
+  }
+
+  function mouseUp() {
+    isSelecting = false;
+  }
+
+  function toggleSlot(slot) {
+    let slotId = `${slot.day}-${slot.time}`;
+    if (selectedSlots.has(slotId)) {
+      selectedSlots.delete(slotId);
+    } else {
+      selectedSlots.add(slotId);
+    }
+    slot.selected = !slot.selected;
+  }
 </script>
 
-<svelte:head>
-	<title>Home</title>
-	<meta name="description" content="Svelte demo app" />
-</svelte:head>
-
-<section>
-	<h1>
-		<span class="welcome">
-			<picture>
-				<source srcset={welcome} type="image/webp" />
-				<img src={welcome_fallback} alt="Welcome" />
-			</picture>
-		</span>
-
-		to your new<br />SvelteKit app
-	</h1>
-
-	<h2>
-		try editing <strong>src/routes/+page.svelte</strong>
-	</h2>
-
-	<Counter />
-</section>
-
 <style>
-	section {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		flex: 0.6;
-	}
-
-	h1 {
-		width: 100%;
-	}
-
-	.welcome {
-		display: block;
-		position: relative;
-		width: 100%;
-		height: 0;
-		padding: 0 0 calc(100% * 495 / 2048) 0;
-	}
-
-	.welcome img {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		top: 0;
-		display: block;
-	}
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: black;
+    user-select: none;
+  }
+  .time-slot {
+    background: #fff;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #ddd;
+  }
+  .selected {
+    background-color: green;
+  }
 </style>
+
+<div class="calendar" on:mouseup={mouseUp}>
+  {#each days as day}
+    <div class="header">{day}</div>
+  {/each}
+  
+  {#each slots as slot}
+    <div
+      class="time-slot {slot.selected ? 'selected' : ''}"
+      on:mousedown={() => mouseDown(slot)}
+      on:mouseover={() => mouseOver(slot)}
+      on:mouseup={mouseUp}
+    >
+      {slot.time}
+    </div>
+  {/each}
+</div>
