@@ -2,14 +2,22 @@
   let name = '';
   let eventName = '';
   let email = '';
+  let editingName = true;
+  let editingEventName = true;
+  let selectedMeetingTime = '';
   let showNameInput = true;
   let showEventNameInput = true;
-  let schedule = {}; // A schedule object to keep track of selected slots
   let isSelecting = false;
   let startSelection = null;
   let endSelection = null;
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const times = ['9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const times = ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '24:00'];
+
+  let schedule = days.reduce((acc, day) => {
+    acc[day] = times.map(() => false);
+    return acc;
+  }, {});
+
 
   let initialSelectionState = false;
 
@@ -17,7 +25,6 @@
 	event.preventDefault();
     isSelecting = true;
     startSelection = { day, time };
-    // Record the initial state when selection starts
     initialSelectionState = !schedule[day][time]; // toggle the state
     selectSlot(day, time, initialSelectionState);
   }
@@ -30,11 +37,11 @@
     }
   }
 
-  function selectSlot(day, time, isSelected) {
-    if (!schedule[day]) {
-      schedule[day] = {};
-    }
-    schedule[day][time] = isSelected;
+  function selectSlot(day, time) {
+    let dayIndex = days.indexOf(day);
+    let timeIndex = times.indexOf(time);
+    schedule[day][timeIndex] = !schedule[day][timeIndex];
+	
   }
 
   function selectRange(isSelected) {
@@ -49,16 +56,6 @@
     }
   }
 
-
-  // Initialize the schedule object
-  days.forEach(day => {
-    schedule[day] = times.reduce((acc, time) => {
-      acc[time] = false;
-      return acc;
-    }, {});
-  });
-
-
   function handleMouseUp() {
     isSelecting = false;
     // Reset the selection range
@@ -66,13 +63,29 @@
     endSelection = null;
   }
 
-  function add(target, type) {
-    if (type === 'name') {
-      name = target.value;
-      showNameInput = false;
-    } else if (type === 'eventName') {
-      eventName = target.value;
-      showEventNameInput = false;
+    // Function to handle double-click for name
+  function handleNameDblClick() {
+    editingName = true;
+    // Focus on the input element after it has been rendered
+    setTimeout(() => {
+      document.getElementById('event-name-input').focus();
+    });
+  }
+
+    // Function to handle double-click for name
+  function handleEventNameDblClick() {
+    editingName = true;
+    // Focus on the input element after it has been rendered
+    setTimeout(() => {
+      document.getElementById('event-name-input').focus();
+    });
+  }
+
+  // Function to save the name and stop editing on Enter key press
+  function saveInput(event) {
+    if (event.key === 'Enter') {
+      name = event.target.value;
+      editingName = false;
     }
   }
 </script>
@@ -135,44 +148,40 @@
   .input-field, .input-text {
     flex: 1; /* This will make each item take up equal space */
     margin: 0 0.5em; /* This adds some space between the items */
-    /* Additional styles for your inputs and text */
   }
 
   .input-field {
     padding: 0.5em;
-    /* Other input styles */
   }
 
-  .input-text {
-    /* Styles for the text after input is entered */
-  }
 
 </style>
 
-<div>
-
 <div class="input-container">
-  {#if showNameInput}
+  {#if editingName}
     <input
-      class="input-field"
-      placeholder="Name"
-      on:keydown={(event) => event.key === 'Enter' && add(event.target, 'name')}
+      id="name-input"
+      type="text"
+	  value={name}
+      on:blur={() => editingName = false}
+      placeholder="Enter your name"
     />
   {:else}
-    <p class="input-text">Hi! {name}</p>
+    <span on:dblclick={handleNameDblClick}>{name || 'Enter your name'}</span> <!-- Fallback text if name is empty -->
   {/if}
 
-  {#if showEventNameInput}
+  {#if editingEventName}
     <input
-      class="input-field"
-      placeholder="Event Name"
-      on:keydown={(event) => event.key === 'Enter' && add(event.target, 'eventName')}
+      id="event-name-input"
+      type="text"
+	  value={eventName}
+      on:blur={() => editingEventName = false}
+      placeholder="Enter event name"
     />
   {:else}
-    <p class="input-text">{eventName}</p>
+    <span on:dblclick={handleEventNameDblClick}>{eventName || 'Enter event name'}</span> <!-- Fallback text if eventName is empty -->
   {/if}
 </div>
-
 
 <table on:mouseup={handleMouseUp} on:mouseleave={handleMouseLeave}>
   <thead>
@@ -201,8 +210,6 @@
   </tbody>
 </table>
 
-<button on:click={handleClick}>
+<button on:click={selectRandomSlot}>
   Submit Availability
 </button>
-
-</div>
