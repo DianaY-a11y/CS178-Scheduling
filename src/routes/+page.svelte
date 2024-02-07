@@ -2,6 +2,7 @@
   let name = '';
   let eventName = '';
   let email = '';
+  let message = 'Scheduling Failed. 4/5 participants are available Tuesday 2:00pm - 3:00pm. Can you adjust?';
   let editingName = true;
   let editingEventName = true;
   let showNameInput = true;
@@ -9,8 +10,16 @@
   let isSelecting = false;
   let startSelection = null;
   let endSelection = null;
+  let meetingFinalized = false;
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const times = ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '24:00'];
+
+  // Preset reserved slots with labels
+  let reservedSlots = {
+    'Monday': {'10:00': '4/5 Available', '11:00': '4/5 Available', '12:00': '4/5 Available', '15:00': '5/5 Available'},
+    'Wednesday': {'11:00': '5/5 Available'},
+    // Define more as needed
+  };
 
   let schedule = days.reduce((acc, day) => {
     acc[day] = times.map(() => false);
@@ -26,6 +35,10 @@
     startSelection = { day, time };
     initialSelectionState = !schedule[day][time]; // toggle the state
     selectSlot(day, time, initialSelectionState);
+  }
+
+  function isReserved(day, time) {
+    return reservedSlots[day] && reservedSlots[day][time];
   }
 
   function handleMouseOver(day, time) {
@@ -146,6 +159,18 @@
   function inc() {
     count++;
   }
+
+  // Function to adjust the meeting based on user's choice
+  function adjustMeeting(adjust) {
+    if (adjust) {
+      message = "Meeting scheduled ✅.";
+    } else {
+      message = "Schedule failed ❌.";
+    }
+	meetingFinalized = true;
+  }
+
+
 </script>
 
 <style>
@@ -171,9 +196,9 @@
   }
 
   table {
-    width: 100%; /* full width of the container */
-    table-layout: fixed; /* ensures that all columns are of equal width */
-    border-collapse: collapse; /* optional, for collapsed borders */
+    width: 100%; 
+    table-layout: fixed; 
+    border-collapse: collapse;
   }
 
   button {
@@ -192,14 +217,14 @@
 
   .input-container {
     display: flex;
-    justify-content: space-between; /* This will justify the content */
-    align-items: center; /* This will vertically align items if they have different heights */
+    justify-content: space-between; 
+    align-items: center; 
     padding: 0.5em;
   }
 
   .input-field, .input-text {
-    flex: 1; /* This will make each item take up equal space */
-    margin: 0 0.5em; /* This adds some space between the items */
+    flex: 1; 
+    margin: 0 0.5em; 
   }
 
   .input-field {
@@ -210,7 +235,18 @@
     margin: 10px;
     position: relative;
   }
+
+  .reserved {
+    background-color: #f0e68c;
+    color: black; 
+  }
+
+  .reserved-selected {
+    background-color: green; 
+  }
 </style>
+
+<h1>CS178 Meeting</h1>
 
 <div class="input-container">
   {#if editingName}
@@ -226,18 +262,6 @@
     <span on:dblclick={handleNameDblClick}>{name || 'Enter your name'}</span> <!-- Fallback text if name is empty -->
   {/if}
 
-  {#if editingEventName}
-    <input
-      id="event-name-input"
-      type="text"
-	  value={eventName}
-      on:blur={() => editingEventName = false}
-      on:keydown={event => saveEventNameInput(event)}
-      placeholder="Enter event name"
-    />
-  {:else}
-    <span on:dblclick={handleEventNameDblClick}>{eventName || 'Enter event name'}</span> <!-- Fallback text if eventName is empty -->
-  {/if}
 </div>
 
 <div class="button-container">
@@ -250,7 +274,12 @@
 <dialog
  id="dialog">
   <button on:click={closeDialog}>Close</button>
-  <p>This is a modal dialog</p>
+  <p>{message}</p>
+  {#if !meetingFinalized}
+    <button on:click={() => adjustMeeting(true)}>Yes</button>
+    <button on:click={() => adjustMeeting(false)}>No</button>
+  {/if}
+
 </dialog>
 
 <div class="table-container">
@@ -270,10 +299,15 @@
           {#each days as day}
             <td
               class:selected={schedule[day]?.[time]}
+			  class:reserved={isReserved(day, time)}
+			  class:reserved-selected={isReserved(day, time) && schedule[day]?.[time]}
               on:mousedown={() => handleMouseDown(day, time)}
               on:mouseover={() => handleMouseOver(day, time)}
               on:mouseup={handleMouseUp}
             >
+			{#if isReserved(day, time)}
+                {reservedSlots[day][time]}
+              {/if}
             </td>
           {/each}
         </tr>
