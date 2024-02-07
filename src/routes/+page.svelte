@@ -4,7 +4,6 @@
   let email = '';
   let editingName = true;
   let editingEventName = true;
-  let selectedMeetingTime = '';
   let showNameInput = true;
   let showEventNameInput = true;
   let isSelecting = false;
@@ -68,13 +67,13 @@
     editingName = true;
     // Focus on the input element after it has been rendered
     setTimeout(() => {
-      document.getElementById('event-name-input').focus();
+      document.getElementById('name-input').focus();
     });
   }
 
     // Function to handle double-click for name
   function handleEventNameDblClick() {
-    editingName = true;
+    editingEventName = true;
     // Focus on the input element after it has been rendered
     setTimeout(() => {
       document.getElementById('event-name-input').focus();
@@ -82,21 +81,74 @@
   }
 
   // Function to save the name and stop editing on Enter key press
-  function saveInput(event) {
+  function saveNameInput(event) {
     if (event.key === 'Enter') {
       name = event.target.value;
       editingName = false;
+      console.log("saved")
     }
+  }
+
+  // Function to save the name and stop editing on Enter key press
+  function saveEventNameInput(event) {
+    if (event.key === 'Enter') {
+      eventName = event.target.value;
+      editingEventName = false;
+      console.log("saved")
+    }
+  }
+
+  function showDialog() {
+    document.getElementById('dialog').showModal();
+    selectRandomSlot()
+    console.log(selectedMeetingTime)
+  }
+
+  function closeDialog() {
+    document.getElementById('dialog').close();
+  }
+
+  let selectedMeetingTime = '';
+
+  // Function to get all available slots
+  function getAvailableSlots() {
+    console.log("get slots")
+      const availableSlots = [];
+    console.log("get avaialble 1")
+      for (const day of days) {
+        for (const [index, time] of times.entries()) {
+          if (schedule[day][index]) {
+            availableSlots.push({ day, time });
+        console.log("get avaialble 1")
+          }
+        }
+      }
+      return availableSlots;
+  }
+
+  // Function to select a random slot
+  function selectRandomSlot() {
+    console.log('hello')
+    const availableSlots = getAvailableSlots();
+    console.log(availableSlots, "available slots");
+    if (availableSlots.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableSlots.length);
+      const slot = availableSlots[randomIndex];
+      selectedMeetingTime = `Meeting from ${slot.time} on ${slot.day} has been chosen`;
+    } else {
+      selectedMeetingTime = 'No available slots to select.';
+    }
+    // Force Svelte to recognize the update
+    selectedMeetingTime = selectedMeetingTime + '';
+  }
+
+  let count = 0;
+  function inc() {
+    count++;
   }
 </script>
 
 <style>
-  .new-todo {
-	font-size: 1.4em;
-	width: 30%;
-	margin: 2em 0 1em 0;
-  }
-
   input {
 	margin: 10px;
   }
@@ -109,13 +161,13 @@
     padding: 5px;
     border: 1px solid #ccc;
     text-align: center;
-	height: 2em;
+	  height: 2em;
   }
   th {
     padding: 5px;
     border: 1px solid #ccc;
     text-align: center;
-	height: 2em;
+	  height: 2em;
   }
 
   table {
@@ -124,7 +176,7 @@
     border-collapse: collapse; /* optional, for collapsed borders */
   }
 
-    button {
+  button {
     padding: 10px 20px;
     margin: 5px;
     background-color: #007bff;
@@ -154,7 +206,10 @@
     padding: 0.5em;
   }
 
-
+  .button-container {
+    margin: 10px;
+    position: relative;
+  }
 </style>
 
 <div class="input-container">
@@ -164,6 +219,7 @@
       type="text"
 	  value={name}
       on:blur={() => editingName = false}
+      on:keydown={event => saveNameInput(event)}
       placeholder="Enter your name"
     />
   {:else}
@@ -176,6 +232,7 @@
       type="text"
 	  value={eventName}
       on:blur={() => editingEventName = false}
+      on:keydown={event => saveEventNameInput(event)}
       placeholder="Enter event name"
     />
   {:else}
@@ -183,33 +240,45 @@
   {/if}
 </div>
 
-<table on:mouseup={handleMouseUp} on:mouseleave={handleMouseLeave}>
-  <thead>
-    <tr>
-      <th>Time/Day</th>
-      {#each days as day}
-        <th>{day}</th>
-      {/each}
-    </tr>
-  </thead>
-  <tbody>
-    {#each times as time, i}
+<div class="button-container">
+  <button 
+  on:click={showDialog}>
+    Submit Availability
+  </button>
+</div>
+
+<dialog
+ id="dialog">
+  <button on:click={closeDialog}>Close</button>
+  <p>This is a modal dialog</p>
+</dialog>
+
+<div class="table-container">
+  <table on:mouseup={handleMouseUp} on:mouseleave={handleMouseLeave}>
+    <thead>
       <tr>
-        <td class="time-column">{time}</td>
+        <th>Time/Day</th>
         {#each days as day}
-          <td
-            class:selected={schedule[day]?.[time]}
-            on:mousedown={() => handleMouseDown(day, time)}
-            on:mouseover={() => handleMouseOver(day, time)}
-            on:mouseup={handleMouseUp}
-          >
-          </td>
+          <th>{day}</th>
         {/each}
       </tr>
-    {/each}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {#each times as time, i}
+        <tr>
+          <td class="time-column">{time}</td>
+          {#each days as day}
+            <td
+              class:selected={schedule[day]?.[time]}
+              on:mousedown={() => handleMouseDown(day, time)}
+              on:mouseover={() => handleMouseOver(day, time)}
+              on:mouseup={handleMouseUp}
+            >
+            </td>
+          {/each}
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+</div>
 
-<button on:click={selectRandomSlot}>
-  Submit Availability
-</button>

@@ -18,7 +18,7 @@
   }
 
   // Function to select a random slot
-  function selectRandomSlot() {
+  export function selectRandomSlot() {
     const availableSlots = getAvailableSlots();
     console.log(availableSlots, "available slots");
     if (availableSlots.length > 0) {
@@ -36,10 +36,10 @@
 <h1>About Us</h1>
 <p>This is the about page.</p>
 
-<style>
+<!-- <style>
   {#if selectedMeetingTime}
     <p>hello there</p>
     <p>{selectedMeetingTime}</p>
   {/if}
 
-</style>
+</style> -->
