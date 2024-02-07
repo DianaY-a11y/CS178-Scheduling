@@ -1,77 +1,208 @@
-<script>
+<script lang="ts">
+  let name = '';
+  let eventName = '';
+  let email = '';
+  let showNameInput = true;
+  let showEventNameInput = true;
+  let schedule = {}; // A schedule object to keep track of selected slots
   let isSelecting = false;
-  let slots = [];
-  let selectedSlots = new Set();
+  let startSelection = null;
+  let endSelection = null;
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const times = ['9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
 
-  // Initialize time slots for the calendar
-  const times = ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  
-  // Populate the slots array with objects representing each time slot
-  for (let day of days) {
-    for (let time of times) {
-      slots.push({ day, time, selected: false });
-    }
-  }
+  let initialSelectionState = false;
 
-  function mouseDown(slot) {
+  function handleMouseDown(day, time) {
+	event.preventDefault();
     isSelecting = true;
-    toggleSlot(slot);
+    startSelection = { day, time };
+    // Record the initial state when selection starts
+    initialSelectionState = !schedule[day][time]; // toggle the state
+    selectSlot(day, time, initialSelectionState);
   }
 
-  function mouseOver(slot) {
+  function handleMouseOver(day, time) {
+	event.preventDefault();
     if (isSelecting) {
-      toggleSlot(slot);
+      endSelection = { day, time };
+      selectRange(initialSelectionState);
     }
   }
 
-  function mouseUp() {
+  function selectSlot(day, time, isSelected) {
+    if (!schedule[day]) {
+      schedule[day] = {};
+    }
+    schedule[day][time] = isSelected;
+  }
+
+  function selectRange(isSelected) {
+    // Logic to select or deselect all slots between startSelection and endSelection
+    // This is a simplified example and will only work if selecting within a single day
+    if (startSelection && endSelection && startSelection.day === endSelection.day) {
+      const startIndex = times.indexOf(startSelection.time);
+      const endIndex = times.indexOf(endSelection.time);
+      for (let i = Math.min(startIndex, endIndex); i <= Math.max(startIndex, endIndex); i++) {
+        schedule[startSelection.day][times[i]] = isSelected;
+      }
+    }
+  }
+
+
+  // Initialize the schedule object
+  days.forEach(day => {
+    schedule[day] = times.reduce((acc, time) => {
+      acc[time] = false;
+      return acc;
+    }, {});
+  });
+
+
+  function handleMouseUp() {
     isSelecting = false;
+    // Reset the selection range
+    startSelection = null;
+    endSelection = null;
   }
 
-  function toggleSlot(slot) {
-    let slotId = `${slot.day}-${slot.time}`;
-    if (selectedSlots.has(slotId)) {
-      selectedSlots.delete(slotId);
-    } else {
-      selectedSlots.add(slotId);
+  function add(target, type) {
+    if (type === 'name') {
+      name = target.value;
+      showNameInput = false;
+    } else if (type === 'eventName') {
+      eventName = target.value;
+      showEventNameInput = false;
     }
-    slot.selected = !slot.selected;
   }
 </script>
 
 <style>
-  .calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 1px;
-    background: black;
-    user-select: none;
+  .new-todo {
+	font-size: 1.4em;
+	width: 30%;
+	margin: 2em 0 1em 0;
   }
-  .time-slot {
-    background: #fff;
-    padding: 10px;
-    text-align: center;
-    border: 1px solid #ddd;
+
+  input {
+	margin: 10px;
   }
+
   .selected {
-    background-color: green;
+    background-color: lightblue;
   }
+  td {
+    cursor: pointer;
+    padding: 5px;
+    border: 1px solid #ccc;
+    text-align: center;
+	height: 2em;
+  }
+  th {
+    padding: 5px;
+    border: 1px solid #ccc;
+    text-align: center;
+	height: 2em;
+  }
+
+  table {
+    width: 100%; /* full width of the container */
+    table-layout: fixed; /* ensures that all columns are of equal width */
+    border-collapse: collapse; /* optional, for collapsed borders */
+  }
+
+    button {
+    padding: 10px 20px;
+    margin: 5px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+
+  .input-container {
+    display: flex;
+    justify-content: space-between; /* This will justify the content */
+    align-items: center; /* This will vertically align items if they have different heights */
+    padding: 0.5em;
+  }
+
+  .input-field, .input-text {
+    flex: 1; /* This will make each item take up equal space */
+    margin: 0 0.5em; /* This adds some space between the items */
+    /* Additional styles for your inputs and text */
+  }
+
+  .input-field {
+    padding: 0.5em;
+    /* Other input styles */
+  }
+
+  .input-text {
+    /* Styles for the text after input is entered */
+  }
+
 </style>
 
-<div class="calendar" on:mouseup={mouseUp}>
-  {#each days as day}
-    <div class="header">{day}</div>
-  {/each}
-  
-  {#each slots as slot}
-    <div
-      class="time-slot {slot.selected ? 'selected' : ''}"
-      on:mousedown={() => mouseDown(slot)}
-      on:mouseover={() => mouseOver(slot)}
-      on:mouseup={mouseUp}
-    >
-      {slot.time}
-    </div>
-  {/each}
+<div>
+
+<div class="input-container">
+  {#if showNameInput}
+    <input
+      class="input-field"
+      placeholder="Name"
+      on:keydown={(event) => event.key === 'Enter' && add(event.target, 'name')}
+    />
+  {:else}
+    <p class="input-text">Hi! {name}</p>
+  {/if}
+
+  {#if showEventNameInput}
+    <input
+      class="input-field"
+      placeholder="Event Name"
+      on:keydown={(event) => event.key === 'Enter' && add(event.target, 'eventName')}
+    />
+  {:else}
+    <p class="input-text">{eventName}</p>
+  {/if}
+</div>
+
+
+<table on:mouseup={handleMouseUp} on:mouseleave={handleMouseLeave}>
+  <thead>
+    <tr>
+      <th>Time/Day</th>
+      {#each days as day}
+        <th>{day}</th>
+      {/each}
+    </tr>
+  </thead>
+  <tbody>
+    {#each times as time, i}
+      <tr>
+        <td class="time-column">{time}</td>
+        {#each days as day}
+          <td
+            class:selected={schedule[day]?.[time]}
+            on:mousedown={() => handleMouseDown(day, time)}
+            on:mouseover={() => handleMouseOver(day, time)}
+            on:mouseup={handleMouseUp}
+          >
+          </td>
+        {/each}
+      </tr>
+    {/each}
+  </tbody>
+</table>
+
+<button on:click={handleClick}>
+  Submit Availability
+</button>
+
 </div>
