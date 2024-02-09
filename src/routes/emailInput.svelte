@@ -62,7 +62,7 @@
         placeholder="Enter your email"
       />
     {:else}
-      <span on:dblclick={handleNameDblClick}>{email || 'Enter your email'}</span> <!-- Fallback text if name is empty -->
+      <span on:dblclick={handleNameDblClick}>{email || 'Enter your email'}</span> 
     {/if}
   
   </div>

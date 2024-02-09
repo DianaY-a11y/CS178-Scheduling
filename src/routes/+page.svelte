@@ -24,7 +24,7 @@
 
   let schedule: { [day: string]: { [time: string]: boolean } } = days.reduce((acc, day) => {
   acc[day] = times.reduce((timeAcc, time) => {
-    timeAcc[time] = false; // Initialize each time slot as not selected
+    timeAcc[time] = false; 
     return timeAcc;
   }, {} as { [time: string]: boolean });
   return acc;
@@ -44,10 +44,10 @@ let reservedSlots: ReservedSlots = {
 
   // This function initiates the selection/deselection process
 function handleMouseDown(event: MouseEvent, day: string, time: string) {
-  event.preventDefault(); // Prevent default text selection, etc.
-  isSelecting = true; // Start the selecting process
-  startSelection = { day, time }; // Mark the start of selection
-  initialSelectionState = !schedule[day][time]; // Save the initial selection state
+  event.preventDefault(); 
+  isSelecting = true; 
+  startSelection = { day, time }; 
+  initialSelectionState = !schedule[day][time]; 
   toggleTimeSlot(day, time);
   
 }
@@ -58,7 +58,7 @@ function handleMouseOver(event: MouseEvent, day: string, time: string) {
   if (isSelecting) {
     if (startSelection && (day !== startSelection.day || time !== startSelection.time)) {
         selectRange(initialSelectionState);
-        endSelection = { day, time }; // Update the end selection
+        endSelection = { day, time }; 
       }
   }
 }
@@ -82,7 +82,7 @@ function selectRange(isSelected: boolean) {
 
 // This function finalizes the selection/deselection process
 function handleMouseUp(event: MouseEvent) {
-    isSelecting = false; // End the selecting process
+    isSelecting = false; 
     // Clear the selection start and end
     startSelection = null;
     endSelection = null;
@@ -98,7 +98,6 @@ function toggleTimeSlot(day: string, time: string) {
     } else {
       availabilityCounts[day][time] = Math.max(0, (availabilityCounts[day][time] || 1) - 1);
     }
-  // Trigger Svelte reactivity
   schedule = {...schedule};
 }
 
@@ -248,7 +247,7 @@ function toggleTimeSlot(day: string, time: string) {
   id="dialog">
   <button on:click={closeDialog}>Close</button>
   <p>{message}</p>
-  {#if !overlap}
+  {#if !overlap && message !== "Availability submitted"}
     <button on:click={() => adjustMeeting(true)}>Yes</button>
     <button on:click={() => adjustMeeting(false)}>No</button>
   {/if}
