@@ -1,15 +1,17 @@
 <script lang="ts">
  import EmailInput from './emailInput.svelte';
- import Suggestion, { showDialog, closeDialog } from './suggestion.svelte';
  import {format, addMinutes} from 'date-fns';
+
+
 
  type ReservedSlots = {[day: string]: {[time: string]: ReservedSlotInfo;}};
  type Selection = { day: string; time: string } | null;
- type Schedule = { [day: string]: { [time: string]: boolean } };
  type AvailabilityCounts = { [day: string]: { [time: string]: number } };
  type ReservedSlotInfo = {current: number; total: number;};
 
 
+  let day, time, overlap: boolean;
+  let message = '';
 
   let isSelecting = false;
   let startSelection: Selection = null;
@@ -40,94 +42,132 @@ let reservedSlots: ReservedSlots = {
   },
 };
 
-  function handleMouseDown(event: MouseEvent, day: string, time: string) {
-    event.preventDefault();
-    isSelecting = true;
-    startSelection = { day, time };
-    initialSelectionState = !schedule[day][time];
-  }
-  function handleMouseUp(event: MouseEvent) {
-    if (isSelecting) {
-      // If the mouse is released without moving, toggle the initial slot
-      if (startSelection && !endSelection) {
-        toggleTimeSlot(startSelection.day, startSelection.time);
+  // This function initiates the selection/deselection process
+function handleMouseDown(event: MouseEvent, day: string, time: string) {
+  event.preventDefault(); // Prevent default text selection, etc.
+  isSelecting = true; // Start the selecting process
+  startSelection = { day, time }; // Mark the start of selection
+  initialSelectionState = !schedule[day][time]; // Save the initial selection state
+  toggleTimeSlot(day, time);
+  
+}
+
+// This function continues the selection/deselection as the mouse moves over other slots
+function handleMouseOver(event: MouseEvent, day: string, time: string) {
+  event.preventDefault();
+  if (isSelecting) {
+    if (startSelection && (day !== startSelection.day || time !== startSelection.time)) {
+        selectRange(initialSelectionState);
+        endSelection = { day, time }; // Update the end selection
       }
-      isSelecting = false;
-      startSelection = null;
-      endSelection = null;
   }
 }
 
-  // Function to toggle the selected state of a time slot
-  function toggleTimeSlot(day: string, time: string) {
-    if (!schedule[day][time]) { // Check if not reserved or already selected
-      schedule[day][time] = !schedule[day][time]; // Toggle the state
-    }
-    // For reactivity, you may need to update the schedule object in a way that triggers Svelte's reactivity
+function selectSlot(day: string, time: string) {
+    schedule[day][time] = !schedule[day][time];
+    availabilityCounts[day][time] = (availabilityCounts[day][time] || 0) + (schedule[day][time] ? 1 : -1);
     schedule = {...schedule};
+}
+
+function selectRange(isSelected: boolean) {
+    if (startSelection && endSelection && startSelection.day === endSelection.day) {
+      const startIndex = times.indexOf(startSelection.time);
+      const endIndex = times.indexOf(endSelection.time);
+      for (let i = Math.min(startIndex, endIndex); i <= Math.max(startIndex, endIndex); i++) {
+        schedule[startSelection.day][times[i]] = isSelected;
+      }
+      schedule = {...schedule};
+    }
   }
+
+// This function finalizes the selection/deselection process
+function handleMouseUp(event: MouseEvent) {
+    isSelecting = false; // End the selecting process
+    // Clear the selection start and end
+    startSelection = null;
+    endSelection = null;
+}
+
+// This function toggles the selected state of a time slot
+function toggleTimeSlot(day: string, time: string) {
+    // If the slot is not reserved, toggle its state
+    schedule[day][time] = !schedule[day][time];
+    // Update availability counts if necessary
+    if (schedule[day][time]) {
+      availabilityCounts[day][time] = (availabilityCounts[day][time] || 0) + 1;
+    } else {
+      availabilityCounts[day][time] = Math.max(0, (availabilityCounts[day][time] || 1) - 1);
+    }
+  // Trigger Svelte reactivity
+  schedule = {...schedule};
+}
 
   function isReserved(day: string, time: string) {
     return reservedSlots[day] && reservedSlots[day][time];
   }
 
-  function handleMouseOver(event: any, day: string, time: string) {
-	event.preventDefault();
-    if (isSelecting) {
-      endSelection = { day, time };
-      selectSlot(day, time);
+  function checkForOverlap(reserved, schedule) {
+    for (const day of days) {
+      for (const time of times) {
+        if (schedule[day][time] && reserved[day] && reserved[day][time]) {
+          return { day, time, overlap: true };
+        }
+      }
     }
+    for (const day of days) {
+      for (const time of times) {
+        if (reserved[day] && reserved[day][time] && !schedule[day][time]) {
+          return { day, time, overlap: false };
+        }
+      }
+    }
+    return null;
   }
 
-  function updateReservedSlotAvailability(day: string, time: string) {
-    const availabilityText = reservedSlots[day][time]; // e.g., "4/5 Available"
-    const matches = availabilityText.match(/(\d+)\/(\d+)/);
-    if (matches) {
-      let [current, total] = matches.slice(1).map(Number); // Extract current and total counts
-      current += 1; // Increment current count as another person selects this time
-      reservedSlots[day][time] = `${current}/${total + 1} Available`; // Update with new availability
-    }
-  }
-
-  // Updates the availability count and selection state for a single slot
-  function selectSlot(day: string, time: string) {
-    if (isReserved(day, time)) {
-    // If slot is reserved and being selected, update its availability count
-    updateReservedSlotAvailability(day, time);
-  } else {
-    // Handle non-reserved slot selection
-    schedule[day][time] = !schedule[day][time];
-    if (schedule[day][time]) {
-      availabilityCounts[day][time] = (availabilityCounts[day][time] || 0) + 1;
+  $: result = checkForOverlap(reservedSlots, schedule);
+  $: if (result) {
+    ({ day, time, overlap } = result);
+    if (overlap) {
+      message = `Perfect! We are awaiting 5 more people to submit their availability. Results will be sent to your email.`;
     } else {
-      availabilityCounts[day][time]--;
+      message = `Your availability differs a lot from other participants. Most participants are free on ${day} at ${time}. Can you adjust?`;
     }
   }
-  schedule = {...schedule}; // Trigger Svelte reactivity
-}
 
-  // Updates the availability count and selection state for a range of slots
-  // function selectRange(isSelected: boolean) {
-  //   if (startSelection && endSelection && startSelection.day === endSelection.day) {
-  //     const startIndex = times.indexOf(startSelection.time);
-  //     const endIndex = times.indexOf(endSelection.time);
-  //     for (let i = Math.min(startIndex, endIndex); i <= Math.max(startIndex, endIndex); i++) {
-  //       if (!isReserved(startSelection.day, times[i])) {
-  //         schedule[startSelection.day][times[i]] = isSelected;
-  //         isSelected ? availabilityCounts[startSelection.day][times[i]]++ : availabilityCounts[startSelection.day][times[i]]--;
-  //       }
-  //     }
-  //     schedule = {...schedule}; // Trigger Svelte reactivity
+  // export let result;
+  //   let day, time, overlap;
+
+  // $: if (result) {
+  //       ({ day, time, overlap } = result);
   //   }
-  // }
+
+  function showDialog() {
+    console.log("show dialog")
+     const elementId = document.getElementById('dialog');
+     if (elementId !== null){
+      elementId.showModal();
+     }
+   }
+ 
+   function closeDialog() {
+    const elementId = document.getElementById('dialog');
+    if (elementId !== null){
+      elementId.close();
+    }
+   }
+
+   function adjustMeeting(adjust: boolean) {
+     if (adjust) {
+      closeDialog();
+     } else {
+       message = "Availability submitted";
+     }
+   }
 
 </script>
 
 <style>
 
-  .selected {
-    background-color: lightblue;
-  }
   td {
     cursor: pointer;
     padding: 5px;
@@ -150,7 +190,7 @@ let reservedSlots: ReservedSlots = {
 
   button {
     padding: 10px 20px;
-    margin: 5px;
+    margin: 0px 10px 10px -10px;
     background-color: #007bff;
     color: white;
     border: none;
@@ -175,13 +215,44 @@ let reservedSlots: ReservedSlots = {
   .reserved-selected {
     background-color: green; 
   }
+
+  input {
+   margin: 10px;
+   }
+ 
+   .selected {
+     background-color: lightblue;
+   }
+
+   td {
+     cursor: pointer;
+     padding: 5px;
+     border: 1px solid #ccc;
+     text-align: center;
+     height: 2em;
+   }
+   th {
+     padding: 5px;
+     border: 1px solid #ccc;
+     text-align: center;
+     height: 2em;
+   }
 </style>
 
 <h1>CS178 Meeting</h1>
 
+
 <EmailInput />
 
-<Suggestion />
+<dialog
+  id="dialog">
+  <button on:click={closeDialog}>Close</button>
+  <p>{message}</p>
+  {#if !overlap}
+    <button on:click={() => adjustMeeting(true)}>Yes</button>
+    <button on:click={() => adjustMeeting(false)}>No</button>
+  {/if}
+</dialog>
 
 <div class="button-container">
   <button 
@@ -201,21 +272,25 @@ let reservedSlots: ReservedSlots = {
       </tr>
     </thead>
     <tbody>
-      {#each times as timeString, i}
+      {#each times as time, i}
         <tr>
-          <td class="time-column">{timeString}</td>
+          <td class="time-column">{time}</td>
           {#each days as day}
             <td
-              class:selected={schedule[day]?.[timeString]}
-              class:reserved={isReserved(day, timeString)}
-              class:reserved-selected={isReserved(day, timeString) && schedule[day]?.[timeString]}
-              on:mousedown={(event) => handleMouseDown(event, day, timeString)}
-              on:mouseover={(event) => handleMouseOver(event, day, timeString)}
-              on:mouseup={(event) => toggleTimeSlot(day, timeString)}
+              class:selected={schedule[day]?.[time]}
+              class:reserved={isReserved(day, time)}
+              class:reserved-selected={isReserved(day, time) && schedule[day]?.[time]}
+              on:mousedown={(event) => handleMouseDown(event, day, time)}
+              on:mouseover={(event) => handleMouseOver(event, day, time)}
+              on:mouseup={handleMouseUp}
             >
-            {#if isReserved(day, timeString)}
-              {`${reservedSlots[day][timeString].current}/${reservedSlots[day][timeString].total} Available`}
-            {/if}
+            {#if isReserved(day, time)}
+            <span class:reserved-selected={schedule[day]?.[time]}>
+              {schedule[day]?.[time] 
+                ? `${reservedSlots[day][time].current + 1}/${reservedSlots[day][time].total + 1} Available`
+                : `${reservedSlots[day][time].current}/${reservedSlots[day][time].total} Available`}
+            </span>
+          {/if}
             </td>
           {/each}
         </tr>
