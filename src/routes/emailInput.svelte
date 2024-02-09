@@ -4,8 +4,8 @@
   
     let initialSelectionState = false;
   
-    // Input Email Functions
-      // Function to handle double-click for name
+    // Input Email Box
+      // Handle double-click for name
       function handleNameDblClick() {
       editingEmail = true;
       // Focus on the input element after it has been rendered
@@ -18,7 +18,7 @@
       
     }
 
-      // Function to save the name and stop editing on Enter key press
+      // Save the name and stop editing on Enter key press
       function saveEmailInput(event: any) {
       if (event.key === 'Enter') {
         email = event.target.value;

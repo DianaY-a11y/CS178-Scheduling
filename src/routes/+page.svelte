@@ -3,7 +3,7 @@
  import {format, addMinutes} from 'date-fns';
 
 
-
+ // Defining data types 
  type ReservedSlots = {[day: string]: {[time: string]: ReservedSlotInfo;}};
  type Selection = { day: string; time: string } | null;
  type AvailabilityCounts = { [day: string]: { [time: string]: number } };
@@ -19,10 +19,13 @@
   let initialSelectionState: boolean = false;
   let availabilityCounts: AvailabilityCounts = {};
   let numberSubmitted = 5;
-
+  
+  // Setting calendar 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const times = ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '24:00'];
 
+  // Initializing schedule data structure to contain day and time that maps to boolean
+  // value of selected or not selected
   let schedule: { [day: string]: { [time: string]: boolean } } = days.reduce((acc, day) => {
   acc[day] = times.reduce((timeAcc, time) => {
     timeAcc[time] = false; 
@@ -43,7 +46,7 @@ let reservedSlots: ReservedSlots = {
   },
 };
 
-  // This function initiates the selection/deselection process
+  // Initiates the selection/deselection process in calendar
 function handleMouseDown(event: MouseEvent, day: string, time: string) {
   event.preventDefault(); 
   isSelecting = true; 
@@ -53,7 +56,7 @@ function handleMouseDown(event: MouseEvent, day: string, time: string) {
   
 }
 
-// This function continues the selection/deselection as the mouse moves over other slots
+// Dragging function
 function handleMouseOver(event: MouseEvent, day: string, time: string) {
   event.preventDefault();
   if (isSelecting) {
@@ -62,12 +65,6 @@ function handleMouseOver(event: MouseEvent, day: string, time: string) {
         endSelection = { day, time }; 
       }
   }
-}
-
-function selectSlot(day: string, time: string) {
-    schedule[day][time] = !schedule[day][time];
-    availabilityCounts[day][time] = (availabilityCounts[day][time] || 0) + (schedule[day][time] ? 1 : -1);
-    schedule = {...schedule};
 }
 
 function selectRange(isSelected: boolean) {
@@ -81,7 +78,7 @@ function selectRange(isSelected: boolean) {
     }
   }
 
-// This function finalizes the selection/deselection process
+// Finalizes the selection/deselection process
 function handleMouseUp(event: MouseEvent) {
     isSelecting = false; 
     // Clear the selection start and end
@@ -89,7 +86,7 @@ function handleMouseUp(event: MouseEvent) {
     endSelection = null;
 }
 
-// This function toggles the selected state of a time slot
+// Toggles the selected state (select or deselect) of a time slot
 function toggleTimeSlot(day: string, time: string) {
     // If the slot is not reserved, toggle its state
     schedule[day][time] = !schedule[day][time];
@@ -102,14 +99,18 @@ function toggleTimeSlot(day: string, time: string) {
   schedule = {...schedule};
 }
 
+  // Indicates available for majority of previous users
   function isReserved(day: string, time: string) {
     return reservedSlots[day] && reservedSlots[day][time];
   }
 
+  // All previous users are available
   function isReservedBest(day: string, time: string) {
     return reservedSlots[day] && reservedSlots[day][time] && reservedSlots[day][time]['current'] === reservedSlots[day][time]['total'];
   }
 
+
+  // Recommend user certain time adjustment if needed
   function checkForOverlap(reserved, schedule) {
     for (const day of days) {
       for (const time of times) {
@@ -128,6 +129,8 @@ function toggleTimeSlot(day: string, time: string) {
     return null;
   }
 
+  // Svelte Reactivity used
+  // Calculates for overlap and recommended time to adjust 
   $: result = checkForOverlap(reservedSlots, schedule);
   $: if (result) {
     ({ day, time, overlap } = result);
@@ -138,13 +141,7 @@ function toggleTimeSlot(day: string, time: string) {
     }
   }
 
-  // export let result;
-  //   let day, time, overlap;
-
-  // $: if (result) {
-  //       ({ day, time, overlap } = result);
-  //   }
-
+  //Display modal 
   function showDialog() {
      const elementId = document.getElementById('dialog');
      if (elementId !== null) {
