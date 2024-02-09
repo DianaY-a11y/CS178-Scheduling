@@ -133,7 +133,6 @@ function toggleTimeSlot(day: string, time: string) {
     ({ day, time, overlap } = result);
     if (overlap) {
       message = `Perfect! We are awaiting 5 more people to submit their availability. Results will be sent to your email.`;
-      numberSubmitted = 6
     } else {
       message = `Your availability differs a lot from other participants. Most participants are free on ${day} at ${time}. Can you adjust your availability?`;
     }
@@ -156,6 +155,9 @@ function toggleTimeSlot(day: string, time: string) {
    function closeDialog() {
     const elementId = document.getElementById('dialog');
     if (elementId !== null) {
+      if (message == `Perfect! We are awaiting 5 more people to submit their availability. Results will be sent to your email.`) {
+        numberSubmitted = 6
+      }
       elementId.close();
     }
    }
