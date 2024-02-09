@@ -18,6 +18,7 @@
   let endSelection: Selection = null;
   let initialSelectionState: boolean = false;
   let availabilityCounts: AvailabilityCounts = {};
+  let numberSubmitted = 5;
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const times = ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '24:00'];
@@ -105,6 +106,10 @@ function toggleTimeSlot(day: string, time: string) {
     return reservedSlots[day] && reservedSlots[day][time];
   }
 
+  function isReservedBest(day: string, time: string) {
+    return reservedSlots[day] && reservedSlots[day][time] && reservedSlots[day][time]['current'] === reservedSlots[day][time]['total'];
+  }
+
   function checkForOverlap(reserved, schedule) {
     for (const day of days) {
       for (const time of times) {
@@ -128,8 +133,9 @@ function toggleTimeSlot(day: string, time: string) {
     ({ day, time, overlap } = result);
     if (overlap) {
       message = `Perfect! We are awaiting 5 more people to submit their availability. Results will be sent to your email.`;
+      numberSubmitted = 6
     } else {
-      message = `Your availability differs a lot from other participants. Most participants are free on ${day} at ${time}. Can you adjust?`;
+      message = `Your availability differs a lot from other participants. Most participants are free on ${day} at ${time}. Can you adjust your availability?`;
     }
   }
 
@@ -141,16 +147,15 @@ function toggleTimeSlot(day: string, time: string) {
   //   }
 
   function showDialog() {
-    console.log("show dialog")
      const elementId = document.getElementById('dialog');
-     if (elementId !== null){
+     if (elementId !== null) {
       elementId.showModal();
      }
    }
  
    function closeDialog() {
     const elementId = document.getElementById('dialog');
-    if (elementId !== null){
+    if (elementId !== null) {
       elementId.close();
     }
    }
@@ -160,6 +165,7 @@ function toggleTimeSlot(day: string, time: string) {
       closeDialog();
      } else {
        message = "Availability submitted";
+       numberSubmitted = 6
      }
    }
 
@@ -206,40 +212,65 @@ function toggleTimeSlot(day: string, time: string) {
     position: relative;
   }
 
+  .yes-button {
+    background-color: green;
+  }
+
+  .no-button {
+    background-color: red;
+  }
+
+  dialog {
+    border-width: 2px;
+    border-color: darkgray;
+    border-radius: 5px;
+    padding: 50px;
+  }
+
   .reserved {
     background-color: #f0e68c;
     color: black; 
   }
 
+  .reserved-best {
+    background-color: #f2dd20;
+    color: black; 
+  }
+
   .reserved-selected {
+    background-color: lightgreen; 
+  }
+
+  .reserved-selected-best {
     background-color: green; 
   }
 
   input {
-   margin: 10px;
-   }
+    margin: 10px;
+  }
  
-   .selected {
-     background-color: lightblue;
-   }
+  .selected {
+    background-color: lightblue;
+  }
 
-   td {
-     cursor: pointer;
-     padding: 5px;
-     border: 1px solid #ccc;
-     text-align: center;
-     height: 2em;
-   }
-   th {
-     padding: 5px;
-     border: 1px solid #ccc;
-     text-align: center;
-     height: 2em;
-   }
+  td {
+    cursor: pointer;
+    padding: 5px;
+    border: 1px solid #ccc;
+    text-align: center;
+    height: 2em;
+  }
+
+  th {
+    padding: 5px;
+    border: 1px solid #ccc;
+    text-align: center;
+    height: 2em;
+  }
 </style>
 
 <h1>CS178 Meeting</h1>
-
+<h2>{numberSubmitted}/10 participants have submitted their availability</h2>
 
 <EmailInput />
 
@@ -248,8 +279,8 @@ function toggleTimeSlot(day: string, time: string) {
   <button on:click={closeDialog}>Close</button>
   <p>{message}</p>
   {#if !overlap && message !== "Availability submitted"}
-    <button on:click={() => adjustMeeting(true)}>Yes</button>
-    <button on:click={() => adjustMeeting(false)}>No</button>
+    <button class="yes-button" on:click={() => adjustMeeting(true)}>Yes</button>
+    <button class="no-button" on:click={() => adjustMeeting(false)}>No</button>
   {/if}
 </dialog>
 
@@ -276,15 +307,20 @@ function toggleTimeSlot(day: string, time: string) {
           <td class="time-column">{time}</td>
           {#each days as day}
             <td
-              class:selected={schedule[day]?.[time]}
-              class:reserved={isReserved(day, time)}
-              class:reserved-selected={isReserved(day, time) && schedule[day]?.[time]}
+              class:selected={!isReserved(day, time) && schedule[day]?.[time]}
+              class:reserved={isReserved(day, time) && !isReservedBest(day, time) && !schedule[day]?.[time]}
+              class:reserved-best={isReserved(day, time) && isReservedBest(day, time) && !schedule[day]?.[time]}
+              class:reserved-selected={isReserved(day, time) && !isReservedBest(day, time) && schedule[day]?.[time]}
+              class:reserved-selected-best={isReserved(day, time) && isReservedBest(day, time) && schedule[day]?.[time]}
               on:mousedown={(event) => handleMouseDown(event, day, time)}
               on:mouseover={(event) => handleMouseOver(event, day, time)}
               on:mouseup={handleMouseUp}
             >
             {#if isReserved(day, time)}
-            <span class:reserved-selected={schedule[day]?.[time]}>
+            <span 
+              class:reserved-selected={!isReservedBest(day, time) && schedule[day]?.[time]}
+              class:reserved-selected-best={isReservedBest(day, time) && schedule[day]?.[time]}
+            >
               {schedule[day]?.[time] 
                 ? `${reservedSlots[day][time].current + 1}/${reservedSlots[day][time].total + 1} Available`
                 : `${reservedSlots[day][time].current}/${reservedSlots[day][time].total} Available`}
